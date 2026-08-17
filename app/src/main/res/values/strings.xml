@@ -1,0 +1,99 @@
+<resources>
+    <string name="app_name">Asistencia</string>
+    <string name="muestra_tu_rostro">Muestra tu rostro</string>
+    <string name="desconocido">Desconocido</string>
+    <string name="verificando">verificando…</string>
+    <string name="ya_registrado">YA REGISTRADO HOY ✓</string>
+    <string name="registrado">REGISTRADO</string>
+    <string name="registrados_hoy">Registrados hoy: %1$d</string>
+    <string name="cambiar_camara">Cambiar cámara</string>
+    <string name="nav_asistencia">Asistencia</string>
+    <string name="nav_trabajadores">Trabajadores</string>
+    <string name="nav_historial">Historial</string>
+    <string name="ver_registrados">Registrados hoy</string>
+    <string name="exportar">Exportar Excel</string>
+    <string name="buscar_registro">Buscar por nombre…</string>
+    <string name="historial_hoy">Registros de hoy</string>
+    <string name="sin_registros">Todavía no hay registros hoy.</string>
+    <string name="total_registros">Total: %1$d</string>
+    <string name="permiso_camara_necesario">Se necesita permiso de cámara para el pase de lista</string>
+    <string name="cargando_modelo">Cargando modelo…</string>
+    <string name="sin_registros_exportar">No hay registros hoy todavía.</string>
+    <string name="error_modelo">Reconocimiento facial no disponible</string>
+    <string name="error_modelo_detalle">Este dispositivo/emulador no soporta el detector de rostros. Usa un teléfono físico para el pase de lista.</string>
+
+    <!-- Trabajadores -->
+    <string name="ver_trabajadores">Trabajadores</string>
+    <string name="registrar_nuevo">Registrar nuevo</string>
+    <string name="registrar_trabajador">Registrar trabajador</string>
+    <string name="nombre_trabajador">Nombre del trabajador</string>
+    <string name="ayuda_foto">Escribe el nombre y toma la foto de frente, con buena luz.</string>
+    <string name="tomar_foto">Tomar foto</string>
+    <string name="guardar_trabajador">Guardar trabajador</string>
+    <string name="foto_ok">¡Rostro detectado! Ya puedes guardar al trabajador.</string>
+    <string name="foto_captura_n">Foto %1$d de %2$d — toma un par más con variación para mejor precisión</string>
+    <string name="foto_error">No se detectó un rostro. Intenta de nuevo de frente y con buena luz.</string>
+    <string name="toma_foto_primero">Toma primero la foto del trabajador</string>
+    <string name="nombre_vacio">Escribe el nombre del trabajador</string>
+    <string name="ya_existe">Ya existe un trabajador con ese nombre</string>
+    <string name="trabajador_guardado">Trabajador registrado ✓</string>
+    <string name="error_guardar_foto">No se pudo guardar la foto</string>
+    <string name="foto_capturada">Foto capturada</string>
+    <string name="buscar_trabajador">Buscar trabajador…</string>
+    <string name="total_trabajadores">%1$d trabajadores</string>
+    <string name="nuevo">NUEVO</string>
+    <string name="sin_trabajadores">No hay trabajadores registrados.</string>
+    <string name="sin_resultados">Sin resultados para la búsqueda.</string>
+
+    <!-- Detalle del trabajador -->
+    <string name="historial_asistencias">Asistencias registradas</string>
+    <string name="total_asistencias">%1$d asistencias</string>
+    <string name="sin_asistencias">Todavía no tiene asistencias registradas.</string>
+    <string name="galeria_pc">De la galería del PC</string>
+    <string name="registrado_en_app">Registrado en la app el %1$s</string>
+
+    <!-- Foto del trabajador -->
+    <string name="agregar_foto">Agregar foto</string>
+    <string name="cambiar_foto">Cambiar foto</string>
+    <string name="titulo_editar_foto">Foto del trabajador</string>
+    <string name="elegir_de_galeria">Elegir de la galería</string>
+    <string name="foto_guardada">Foto guardada ✓</string>
+    <string name="sin_app_camara">No hay app de cámara disponible</string>
+
+    <!-- Actualizar / Eliminar trabajador -->
+    <string name="actualizar_trabajador">Actualizar trabajador</string>
+    <string name="actualizar">Actualizar</string>
+    <string name="guardar_cambios">Guardar cambios</string>
+    <string name="eliminar">Eliminar</string>
+    <string name="eliminar_trabajador">Eliminar trabajador</string>
+    <string name="eliminar_trabajadores">Eliminar trabajadores</string>
+    <string name="aviso_renombrar">El nombre también se actualiza en el reconocimiento facial y en el historial de asistencias.</string>
+    <string name="confirmar_eliminar_app">¿Eliminar a %1$s? Se borrará de la lista, su foto y su historial de asistencias.</string>
+    <string name="confirmar_eliminar_pc">%1$s es de la galería del PC y viene dentro de la app, así que no se puede borrar del todo. Se eliminará DEFINITIVAMENTE: dejará de aparecer en la lista y de ser reconocido, y se borrará su historial de asistencias. Solo volvería si reinstalas la app.</string>
+    <string name="trabajador_eliminado">Trabajador eliminado</string>
+    <string name="trabajador_actualizado">Trabajador actualizado ✓</string>
+
+    <!-- Selección múltiple (borrar en lote) -->
+    <string name="seleccionar_todo">Seleccionar todo</string>
+    <string name="deseleccionar_todo">Desmarcar todo</string>
+    <string name="seleccionados">%1$d seleccionados</string>
+    <string name="borrar_seleccion">Borrar selección</string>
+    <string name="confirmar_eliminar_lote">¿Eliminar a %1$d trabajadores? Todos se eliminarán DEFINITIVAMENTE: dejarán de aparecer en la lista y de ser reconocidos, y se borrará su historial de asistencias. Los del PC solo volverían si reinstalas la app.</string>
+    <string name="trabajadores_eliminados">%1$d trabajadores eliminados</string>
+
+    <!-- Sincronización WiFi -->
+    <string name="sincronizar">Sincronizar</string>
+    <string name="sincronizar_titulo">Sincronización</string>
+    <string name="ayuda_sincronizar">Conecta este celular al mismo WiFi que los demás y presiona "Sincronizar ahora" para poner al día todos los dispositivos a la vez (sin internet).</string>
+    <string name="mi_direccion">Dirección: %1$s</string>
+    <string name="mi_qr">Código QR de este dispositivo</string>
+    <string name="sin_red">Sin conexión WiFi</string>
+    <string name="sincronizar_ahora">Sincronizar ahora</string>
+    <string name="escanear_qr">Escanear QR de otro dispositivo</string>
+    <string name="leer_qr">Apunta la cámara al código QR del otro dispositivo</string>
+    <string name="buscando_dispositivos">Buscando dispositivos en la red…</string>
+    <string name="dispositivo_agregado">Dispositivo agregado: %1$s</string>
+    <string name="qr_no_valido">El código QR no es válido</string>
+    <string name="dispositivos_conocidos">Dispositivos vinculados:</string>
+    <string name="sin_dispositivos">Sin dispositivos vinculados. Escanea el QR del otro dispositivo (también se encuentran solos si están en el mismo WiFi).</string>
+</resources>

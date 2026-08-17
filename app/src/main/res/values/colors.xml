@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fondo">#0F1115</color>
+    <color name="fondo_panel">#E61A1D24</color>
+    <color name="card">#161A22</color>
+    <color name="borde">#232B39</color>
+    <color name="blanco">#FFFFFF</color>
+    <color name="gris_texto">#9CA3AF</color>
+    <color name="verde">#22C55E</color>
+    <color name="amarillo">#FACC15</color>
+    <color name="rojo">#EF4444</color>
+    <color name="azul">#3B82F6</color>
+    <color name="azul_oscuro">#1E3A8A</color>
+    <color name="ic_launcher_background">#25243C</color>
+</resources>

@@ -1,0 +1,16 @@
+FOTOS DE LOS TRABAJADORES DEL PC
+===============================
+
+Esta carpeta contiene las fotos de los trabajadores de la galería del PC
+(una foto por trabajador, con el nombre exacto que aparece en nombres.json).
+Se generan automáticamente desde la carpeta "Data full" del PC con:
+
+    python copiar_fotos_pc.py   (desde la raíz de este proyecto)
+
+Si agregas trabajadores nuevos al pase de lista del PC, vuelve a ejecutar
+ese script y recompila la app para incluirlos:
+
+    ./gradlew :app:assembleDebug
+
+La búsqueda de la app ignora mayúsculas/minúsculas y espacios de más, y
+acepta .jpg, .jpeg y .png.

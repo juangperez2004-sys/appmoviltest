@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/tab_asistencia"
+        android:icon="@drawable/ic_camara"
+        android:title="@string/nav_asistencia" />
+    <item
+        android:id="@+id/tab_trabajadores"
+        android:icon="@drawable/ic_personas"
+        android:title="@string/nav_trabajadores" />
+    <item
+        android:id="@+id/tab_historial"
+        android:icon="@drawable/ic_historial"
+        android:title="@string/nav_historial" />
+</menu>

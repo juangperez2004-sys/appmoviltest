@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta de menú — Asistencia (mockup)</title>
+<style>
+  :root {
+    --fondo: #0F1115;
+    --panel: #14181F;
+    --panel2: #1A1D24;
+    --blanco: #FFFFFF;
+    --gris: #9CA3AF;
+    --verde: #22C55E;
+    --amarillo: #FACC15;
+    --rojo: #EF4444;
+    --azul: #3B82F6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(circle at 50% 0%, #1a2130, #0a0c10 70%);
+    font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+    color: var(--blanco);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 40px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .sub { color: var(--gris); font-size: 13px; margin-bottom: 18px; }
+  .hint { color: var(--gris); font-size: 12px; background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.35); padding: 6px 12px; border-radius: 20px; margin-bottom: 16px; }
+
+  /* ---- Teléfono ---- */
+  .phone {
+    width: 380px;
+    max-width: 96vw;
+    height: 780px;
+    background: var(--fondo);
+    border-radius: 36px;
+    border: 6px solid #2a2f3a;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ---- Pantalla: Asistencia ---- */
+  .cam {
+    position: relative;
+    flex: 1;
+    background: linear-gradient(160deg, #2b3140 0%, #161a22 55%, #101318 100%);
+    display: flex;
+    flex-direction: column;
+  }
+  .cam-top {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, rgba(15,17,21,.9), transparent);
+  }
+  .fecha-chip {
+    background: var(--azul); color: #fff; font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .cam-top .title { font-size: 17px; font-weight: 700; margin-left: 4px; }
+  .cam-top .spacer { flex: 1; }
+  .icono { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.08);
+    display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .ovalo-guia {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    width: 240px; height: 300px;
+    border: 2px dashed rgba(156,163,175,.55);
+    border-radius: 50% 50% 46% 46%;
+  }
+  .ovalo-txt { position: absolute; left: 50%; top: 66%; transform: translateX(-50%);
+    color: var(--gris); font-size: 12px; }
+  .estado {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .estado .nombre { font-size: 30px; font-weight: 800; letter-spacing: .5px; }
+  .estado .verif { color: var(--amarillo); font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .estado .sim { color: var(--gris); font-size: 13px; margin-top: 4px; }
+  .caja-rostro {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    width: 150px; height: 190px; border: 3px solid var(--amarillo); border-radius: 20px;
+  }
+  .caja-etiqueta { position: absolute; left: 50%; top: calc(42% - 108px); transform: translateX(-50%);
+    color: var(--amarillo); font-size: 12px; font-weight: 700; }
+
+  .panel {
+    background: var(--panel);
+    border-top: 1px solid #222936;
+    padding: 14px 16px 10px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .fila-contador { display: flex; align-items: center; gap: 10px; }
+  .contador { font-size: 15px; font-weight: 700; }
+  .puntos { display: flex; gap: 4px; }
+  .punto { width: 8px; height: 8px; border-radius: 50%; background: #2c3444; }
+  .punto.lleno { background: var(--amarillo); }
+  .fila-botones { display: flex; gap: 10px; }
+  .boton { flex: 1; background: var(--azul); color: #fff; border: none; border-radius: 12px;
+    padding: 11px 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center;
+    justify-content: center; gap: 6px; }
+  .boton.ghost { background: transparent; border: 1px solid #2c3444; color: var(--gris); }
+
+  /* ---- Pantalla: Trabajadores ---- */
+  .listas { flex: 1; display: none; flex-direction: column; overflow: hidden; }
+  .top { display: flex; align-items: center; gap: 10px; padding: 16px 16px 8px; }
+  .top .title { font-size: 20px; font-weight: 800; flex: 1; }
+  .chip { background: rgba(59,130,246,.15); color: var(--azul); font-size: 12px; font-weight: 700;
+    padding: 5px 10px; border-radius: 20px; }
+  .buscar { margin: 8px 16px; background: var(--panel2); border: 1px solid #2c3444;
+    border-radius: 12px; padding: 10px 14px; color: var(--gris); font-size: 14px;
+    display: flex; align-items: center; gap: 8px; }
+  .lista { flex: 1; overflow-y: auto; padding: 4px 16px 80px; display: flex; flex-direction: column; gap: 8px; }
+  .item { background: var(--panel); border-radius: 12px; padding: 10px 12px;
+    display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+  .avatar.foto { background: linear-gradient(135deg,#3d4a63,#232a38); }
+  .item .nombre { font-size: 14px; font-weight: 600; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .origen { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+  .origen.pc { background: rgba(156,163,175,.15); color: var(--gris); }
+  .origen.app { background: rgba(59,130,246,.18); color: var(--azul); }
+  .fab {
+    position: absolute; right: 18px; bottom: 86px; width: 58px; height: 58px;
+    border-radius: 50%; background: var(--azul); color: #fff; font-size: 30px; font-weight: 300;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(59,130,246,.45);
+  }
+
+  /* ---- Pantalla: Historial ---- */
+  .chips { display: flex; gap: 8px; padding: 4px 16px 10px; }
+  .chip.resumen { background: rgba(59,130,246,.18); color: var(--azul); }
+  .chip.resumen.ghost { background: transparent; border: 1px solid #2c3444; color: var(--gris); }
+  .hora { color: var(--verde); font-family: Consolas, monospace; font-size: 14px; font-weight: 700; min-width: 64px; }
+  .item .reg { font-size: 14px; font-weight: 600; flex: 1; }
+
+  /* ---- Bottom navigation ---- */
+  .bottombar {
+    background: var(--panel);
+    border-top: 1px solid #222936;
+    display: flex; padding: 6px 0 10px;
+  }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 0; color: var(--gris); font-size: 10.5px; font-weight: 600; cursor: pointer;
+    border: none; background: none; font-family: inherit; }
+  .tab .ico { font-size: 21px; line-height: 1; }
+  .tab.activa { color: var(--azul); }
+  .tab.activa .ico { filter: drop-shadow(0 0 6px rgba(59,130,246,.5)); }
+
+  .nota { max-width: 380px; margin-top: 18px; color: var(--gris); font-size: 12px; text-align: center; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <h1>📱 Propuesta de menú — Asistencia</h1>
+  <div class="sub">Bottom navigation · 3 secciones · mockup navegable</div>
+  <div class="hint">Haz clic en las pestañas de abajo para cambiar de pantalla</div>
+
+  <div class="phone">
+    <div class="screen">
+
+      <!-- PANTALLA 1: ASISTENCIA -->
+      <div id="pant-asistencia" class="cam">
+        <div class="cam-top">
+          <div class="fecha-chip">Sáb 15 ago</div>
+          <div class="title">Asistencia</div>
+          <div class="spacer"></div>
+          <div class="icono">⟳</div>
+        </div>
+        <div class="ovalo-guia"></div>
+        <div class="caja-rostro"></div>
+        <div class="caja-etiqueta">JUAN PÉREZ</div>
+        <div class="estado">
+          <div class="nombre">JUAN PÉREZ</div>
+          <div class="verif">verificando…</div>
+          <div class="sim">sim 0.61</div>
+        </div>
+        <div class="ovalo-txt">Coloca tu rostro dentro del óvalo</div>
+        <div class="panel">
+          <div class="fila-contador">
+            <div class="contador">Registrados hoy: <span style="color:var(--azul)">23</span></div>
+            <div class="spacer" style="flex:1"></div>
+            <div class="puntos">
+              <div class="punto lleno"></div><div class="punto lleno"></div>
+              <div class="punto lleno"></div><div class="punto"></div><div class="punto"></div>
+            </div>
+          </div>
+          <div class="fila-botones">
+            <div class="boton ghost">🕐 Registrados</div>
+            <div class="boton">⬇ Exportar CSV</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANTALLA 2: TRABAJADORES -->
+      <div id="pant-trabajadores" class="listas">
+        <div class="top">
+          <div class="title">Trabajadores</div>
+          <div class="chip">440</div>
+        </div>
+        <div class="buscar">🔍 &nbsp;Buscar trabajador…</div>
+        <div class="lista">
+          <div class="item"><div class="avatar" style="background:#3B82F6">AB</div><div class="nombre">ABEL ROBLES MIRANDA</div><div class="origen pc">PC</div></div>
+          <div class="item"><div class="avatar" style="background:#8B5CF6">AG</div><div class="nombre">ABIGAIL GONZALEZ RAMIREZ</div><div class="origen pc">PC</div></div>
+          <div class="item"><div class="avatar foto">📷</div><div class="nombre">JUAN PÉREZ</div><div class="origen app">APP</div></div>
+          <div class="item"><div class="avatar" style="background:#10B981">AC</div><div class="nombre">ADELA IXBAN VAZQUEZ</div><div class="origen pc">PC</div></div>
+          <div class="item"><div class="avatar" style="background:#F59E0B">AO</div><div class="nombre">ADRIANA ORTIGOZA SILVA</div><div class="origen pc">PC</div></div>
+          <div class="item"><div class="avatar" style="background:#EF4444">AR</div><div class="nombre">ADRIANA ROMERO RODRIGUEZ</div><div class="origen pc">PC</div></div>
+        </div>
+        <div class="fab">+</div>
+      </div>
+
+      <!-- PANTALLA 3: HISTORIAL -->
+      <div id="pant-historial" class="listas">
+        <div class="top">
+          <div class="title">Historial</div>
+          <div class="icono">⬇</div>
+        </div>
+        <div class="chips">
+          <div class="chip resumen">Hoy: 23</div>
+          <div class="chip resumen ghost">Esta semana: 118</div>
+        </div>
+        <div class="lista">
+          <div class="item"><div class="hora">08:12:03</div><div class="reg">ABEL ROBLES MIRANDA</div></div>
+          <div class="item"><div class="hora">08:14:47</div><div class="reg">ABIGAIL GONZALEZ RAMIREZ</div></div>
+          <div class="item"><div class="hora">08:15:22</div><div class="reg">JUAN PÉREZ</div></div>
+          <div class="item"><div class="hora">08:17:09</div><div class="reg">ADELA IXBAN VAZQUEZ</div></div>
+          <div class="item"><div class="hora">08:19:55</div><div class="reg">ADRIANA ORTIGOZA SILVA</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BARRA INFERIOR -->
+    <div class="bottombar">
+      <button class="tab activa" data-tab="asistencia"><span class="ico">📷</span>Asistencia</button>
+      <button class="tab" data-tab="trabajadores"><span class="ico">👥</span>Trabajadores</button>
+      <button class="tab" data-tab="historial"><span class="ico">🕐</span>Historial</button>
+    </div>
+  </div>
+
+  <div class="nota">
+    Mockup de propuesta (no es la app real). Colores tomados del tema actual de la app.<br>
+    Detalle / Editar / Registrar siguen siendo pantallas con botón "atrás" encima de esta barra.
+  </div>
+
+<script>
+  const tabs = document.querySelectorAll('.tab');
+  const pantallas = {
+    'asistencia': document.getElementById('pant-asistencia'),
+    'trabajadores': document.getElementById('pant-trabajadores'),
+    'historial': document.getElementById('pant-historial')
+  };
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('activa'));
+      tab.classList.add('activa');
+      Object.entries(pantallas).forEach(([k, el]) => {
+        if (k === tab.dataset.tab) {
+          el.style.display = 'flex';
+        } else {
+          el.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
+</body>
+</html>

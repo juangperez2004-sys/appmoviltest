@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_sincronizar"
+        android:icon="@drawable/ic_sincronizar"
+        android:title="@string/sincronizar"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_seleccionar_todo"
+        android:title="@string/seleccionar_todo"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_eliminar"
+        android:icon="@drawable/ic_delete"
+        android:title="@string/eliminar"
+        app:showAsAction="always" />
+</menu>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¿Cómo funciona el reconocimiento facial?</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Segoe UI", -apple-system, Arial, sans-serif;
+    background:#f7f9fc; color:#26303d; line-height:1.5;
+  }
+
+  /* ---------- Encabezado ---------- */
+  header {
+    background:linear-gradient(120deg,#eaf2ff 0%, #f7f9fc 70%);
+    border-bottom:1px solid #e3eaf5;
+    text-align:center; padding:52px 20px 40px;
+  }
+  .brand { font-size:13px; font-weight:700; color:#2563eb; letter-spacing:1.5px; text-transform:uppercase; }
+  header h1 { font-size:32px; color:#111827; margin-top:10px; font-weight:800; }
+  header p { max-width:680px; margin:12px auto 0; color:#526071; font-size:16px; }
+  .chips { margin-top:22px; }
+  .chip {
+    display:inline-block; margin:4px; padding:7px 16px; border-radius:999px;
+    background:#fff; border:1px solid #d7e0ee; color:#334155; font-size:13px; font-weight:600;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+
+  .wrap { max-width:860px; margin:0 auto; padding:0 22px; }
+
+  h2 {
+    font-size:21px; color:#111827; font-weight:800; margin:46px 0 4px; text-align:center;
+  }
+  .hint { text-align:center; color:#64748b; font-size:14px; margin-bottom:26px; }
+
+  /* ---------- Pasos ---------- */
+  .flow { display:grid; gap:12px; }
+  .step {
+    display:flex; gap:18px; align-items:flex-start;
+    background:#fff; border:1px solid #e5ebf4; border-radius:14px;
+    padding:18px 22px;
+    box-shadow:0 2px 8px rgba(15,23,42,.05);
+  }
+  .icon {
+    flex:0 0 auto; width:46px; height:46px; border-radius:12px;
+    background:#eff6ff; border:1px solid #dbeafe; color:#2563eb;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .icon svg { width:24px; height:24px; }
+  .step .txt h3 { font-size:16.5px; color:#1f2937; font-weight:700; }
+  .step .txt p { margin-top:4px; font-size:14.5px; color:#55627a; }
+  .step .txt b { color:#1d4ed8; }
+
+  .flow-connector { width:2px; height:18px; margin-left:45px; background:#c7d6ef; border-radius:1px; }
+
+  /* ---------- Colores ---------- */
+  .colors { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; }
+  .cbox { border-radius:14px; padding:18px 20px; color:#fff; box-shadow:0 3px 10px rgba(15,23,42,.12); }
+  .cbox .t { font-size:17px; font-weight:800; }
+  .cbox p { margin-top:4px; font-size:14px; opacity:.95; }
+  .c-green { background:linear-gradient(120deg,#22a24a,#16a34a); }
+  .c-yellow { background:linear-gradient(120deg,#d9a411,#ca8a04); }
+  .c-red { background:linear-gradient(120deg,#e04040,#dc2626); }
+
+  /* ---------- Errores ---------- */
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+  .panel {
+    background:#fff; border:1px solid #e5ebf4; border-radius:14px;
+    padding:20px; box-shadow:0 2px 8px rgba(15,23,42,.05);
+  }
+  .panel .dot {
+    width:22px; height:22px; border-radius:50%; background:#dcfce7; color:#15803d;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; margin-bottom:10px;
+  }
+  .panel h3 { font-size:15.5px; color:#111827; font-weight:700; }
+  .panel p { margin-top:5px; font-size:14px; color:#55627a; }
+
+  footer { text-align:center; color:#93a1b5; font-size:13px; margin-top:46px; padding:0 20px 10px; }
+
+  @media print {
+    body { background:#fff; }
+    header { background:#f0f6ff; }
+    .step, .panel { box-shadow:none; border-color:#cbd5e1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">AsistenciaApp</div>
+  <h1>¿Cómo funciona el reconocimiento facial?</h1>
+  <p>La app identifica a cada trabajador por su rostro y registra su asistencia, sin tarjeta ni contacto.</p>
+  <div class="chips">
+    <span class="chip">Rápido</span>
+    <span class="chip">Sin contacto</span>
+    <span class="chip">Funciona en cualquier celular</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2>Paso a paso</h2>
+  <div class="hint">Todo ocurre en menos de un segundo.</div>
+  <div class="flow">
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="9" width="10" height="7" rx="2"/></svg>
+      </div>
+      <div class="txt">
+        <h3>La cámara ve a la persona</h3>
+        <p>La persona se coloca frente al celular y el sistema busca su <b>rostro</b> en la imagen.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+      </div>
+      <div class="txt">
+        <h3>Endereza y enfoca la cara</h3>
+        <p>Si la imagen está girada o movida, la acomoda y solo usa la cara cuando está <b>clara y enfocada</b>.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M6 21v-1a6 6 0 0 1 6-6 6 6 0 0 1 6 6v1"/></svg>
+      </div>
+      <div class="txt">
+        <h3>Le saca una "huella facial"</h3>
+        <p>Como la huella del dedo, cada cara tiene un <b>código único</b>. El sistema convierte el rostro en ese código.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="11" cy="11" rx="7" ry="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </div>
+      <div class="txt">
+        <h3>La compara con todos los trabajadores</h3>
+        <p>Busca entre los <b>440 trabajadores registrados</b> quién tiene la huella facial más parecida.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V5s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="10" x2="4" y2="21"/><line x1="20" y1="10" x2="20" y2="21"/></svg>
+      </div>
+      <div class="txt">
+        <h3>Muestra el nombre y la foto</h3>
+        <p>Si encuentra a la persona, aparece su <b>nombre y su foto</b> en pantalla para confirmarlo.</p>
+      </div>
+    </div>
+    <div class="flow-connector"></div>
+
+    <div class="step">
+      <div class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/></svg>
+      </div>
+      <div class="txt">
+        <h3>Registra la asistencia</h3>
+        <p>Guarda la <b>fecha y la hora</b> de llegada. Cada trabajador se registra <b>una sola vez por día</b>.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <h2>Qué significan los colores en pantalla</h2>
+  <div class="hint">El sistema avisa con colores para que todos sepan qué pasó.</div>
+  <div class="colors">
+    <div class="cbox c-green">
+      <div class="t">Verde</div>
+      <p>Asistencia registrada correctamente, o el trabajador ya estaba registrado hoy.</p>
+    </div>
+    <div class="cbox c-yellow">
+      <div class="t">Amarillo</div>
+      <p>Verificando… el sistema está confirmando la identidad, espera un instante.</p>
+    </div>
+    <div class="cbox c-red">
+      <div class="t">Rojo</div>
+      <p>Desconocido: no coincide con ningún trabajador registrado.</p>
+    </div>
+  </div>
+
+  <h2>¿Cómo evitamos que se equivoque?</h2>
+  <div class="grid">
+    <div class="panel">
+      <div class="dot">✓</div>
+      <h3>No registra de un instante</h3>
+      <p>La persona debe verse varios momentos seguidos antes de registrarse; nadie se registra por pasar rápido.</p>
+    </div>
+    <div class="panel">
+      <div class="dot">✓</div>
+      <h3>Compara con todas las personas</h3>
+      <p>Busca entre los 440 trabajadores y exige que no haya otra persona "casi igual de parecida".</p>
+    </div>
+    <div class="panel">
+      <div class="dot">✓</div>
+      <h3>Funciona en condiciones difíciles</h3>
+      <p>Con poca luz, a distancia normal o en distintos celulares sigue reconociendo correctamente.</p>
+    </div>
+  </div>
+
+  <footer>Demo de AsistenciaApp — Reconocimiento facial para el control de asistencia</footer>
+</div>
+</body>
+</html>

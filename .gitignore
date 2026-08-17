@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+.kotlin/
+build/
+**/build/
+
+# Android / IDE
+.idea/
+*.iml
+local.properties
+.captures
+.externalNativeBuild/
+.cxx/
+
+# APKs
+*.apk
+*.aab
+
+# Herramientas locales
+.freebuff/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
