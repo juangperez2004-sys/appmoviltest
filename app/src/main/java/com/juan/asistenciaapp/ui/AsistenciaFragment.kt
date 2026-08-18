@@ -395,7 +395,9 @@ class AsistenciaFragment : Fragment() {
                 // Fotograma borroso (movido o desenfocado): su embedding ensucia
                 // el promedio temporal y baja la similitud real. Se descarta sin
                 // tocar la ventana: el estado en pantalla se mantiene.
-                if (!FaceUtil.esNitida(alineado)) {
+                // Nitidez ADAPTATIVA a la luz: acepta tomas oscuras pero nítidas
+                // y sigue rechazando el desenfoque real.
+                if (!FaceUtil.esNitidaAdaptativa(alineado)) {
                     return
                 }
 

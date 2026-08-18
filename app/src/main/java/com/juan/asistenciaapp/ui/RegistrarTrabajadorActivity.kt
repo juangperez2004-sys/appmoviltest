@@ -249,6 +249,19 @@ class RegistrarTrabajadorActivity : AppCompatActivity() {
 
                 val recorte = resultado.recorte
                 val emb = resultado.huella
+
+                // Filtro de calidad del alta: si la foto está borrosa NO se acepta
+                // (una mala foto ensuciaría la huella promediada).
+                if (!FaceUtil.esNitidaAdaptativa(recorte)) {
+                    runOnUiThread {
+                        binding.btnTomarFoto.isEnabled = true
+                        binding.tvEstado.text = getString(R.string.foto_borrosa)
+                        binding.tvEstado.setTextColor(ContextCompat.getColor(this@RegistrarTrabajadorActivity, R.color.rojo))
+                    }
+                    recorte.recycle()
+                    return@execute
+                }
+
                 runOnUiThread {
                     binding.btnTomarFoto.isEnabled = true
                     // Reemplaza la foto mostrada (recicla la anterior)
@@ -266,13 +279,13 @@ class RegistrarTrabajadorActivity : AppCompatActivity() {
                         .setDuration(200)
                         .setInterpolator(DecelerateInterpolator())
                         .start()
-                    binding.btnGuardar.isEnabled = true
-                    if (capturas.size >= FOTOS_RECOMENDADAS) {
-                        binding.tvEstado.text = getString(R.string.foto_ok)
-                    } else {
-                        binding.tvEstado.text = getString(
+                    binding.btnGuardar.isEnabled = capturas.size >= FOTOS_MINIMAS
+                    binding.tvEstado.text = when {
+                        capturas.size >= FOTOS_RECOMENDADAS -> getString(R.string.foto_ok)
+                        capturas.size >= FOTOS_MINIMAS -> getString(
                             R.string.foto_captura_n, capturas.size, FOTOS_RECOMENDADAS
                         )
+                        else -> getString(R.string.foto_minimas, FOTOS_MINIMAS)
                     }
                     binding.tvEstado.setTextColor(ContextCompat.getColor(this@RegistrarTrabajadorActivity, R.color.verde))
                 }
@@ -313,8 +326,9 @@ class RegistrarTrabajadorActivity : AppCompatActivity() {
             Toast.makeText(this, R.string.error_guardar_foto, Toast.LENGTH_SHORT).show()
             return
         }
-        // Promedio de las huellas capturadas (más robusto que una sola foto)
-        val huella = FaceUtil.promediar(fotos)
+        // Promedio de las huellas capturadas, sin los outliers
+        // (una foto mala no debe contaminar la huella final)
+        val huella = FaceUtil.promediar(limpiarOutliers(fotos))
         if (db.insertarTrabajador(nombre, huella, LocalDate.now().toString())) {
             Toast.makeText(this, R.string.trabajador_guardado, Toast.LENGTH_SHORT).show()
             finish()
@@ -324,10 +338,33 @@ class RegistrarTrabajadorActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Descarta las huellas que se alejan mucho del promedio (una foto mala con
+     * luz/ángulo raro no debe contaminar la huella final). Si quedarían menos
+     * de 2, se conservan todas.
+     */
+    private fun limpiarOutliers(capturas: List<FloatArray>): List<FloatArray> {
+        if (capturas.size <= 2) return capturas
+        val prom = FloatArray(512)
+        for (e in capturas) {
+            for (i in prom.indices) prom[i] += e[i]
+        }
+        for (i in prom.indices) prom[i] /= capturas.size
+        val buenas = capturas.filter { coseno(it, prom) >= 0.6f }
+        return if (buenas.size >= 2) buenas else capturas
+    }
+
+    private fun coseno(a: FloatArray, b: FloatArray): Float {
+        var dot = 0f
+        for (i in a.indices) dot += a[i] * b[i]
+        return dot // las huellas ya vienen normalizadas (norma 1)
+    }
+
     companion object {
         /** Fotos recomendadas por trabajador para una huella robusta. */
-        private const val FOTOS_RECOMENDADAS = 3
-
+        private const val FOTOS_RECOMENDADAS = 4
+        /** Mínimo de fotos buenas para poder guardar al trabajador. */
+        private const val FOTOS_MINIMAS = 3
         fun abrir(context: Context) {
             context.startActivity(Intent(context, RegistrarTrabajadorActivity::class.java))
             (context as? android.app.Activity)

@@ -32,6 +32,8 @@
     <string name="guardar_trabajador">Guardar trabajador</string>
     <string name="foto_ok">¡Rostro detectado! Ya puedes guardar al trabajador.</string>
     <string name="foto_captura_n">Foto %1$d de %2$d — toma un par más con variación para mejor precisión</string>
+    <string name="foto_borrosa">Foto borrosa. Repítela sin mover el celular.</string>
+    <string name="foto_minimas">Toma al menos %1$d fotos con variación.</string>
     <string name="foto_error">No se detectó un rostro. Intenta de nuevo de frente y con buena luz.</string>
     <string name="toma_foto_primero">Toma primero la foto del trabajador</string>
     <string name="nombre_vacio">Escribe el nombre del trabajador</string>

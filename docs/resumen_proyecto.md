@@ -123,7 +123,19 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 
 - Proyecto subido a **https://github.com/juangperez2004-sys/appmoviltest** (rama `master`).
 - Se creó `.gitignore` (excluye `build/`, `.gradle/`, `.idea/`, `local.properties`, `.freebuff/`, APKs).
-- Commit inicial: `fbe078d`.
+- Commit inicial: `fbe078d` · Commit de mejoras de UX en sincronización: `e16418e`.
+
+### 3.7 Mejoras de precisión del reconocimiento (puntos 2 y 3)
+
+**Punto 2 — Mejor alta (registro de trabajador)** (`RegistrarTrabajadorActivity.kt`):
+- **Validación por captura**: cada foto se revisa con nitidez adaptativa (`esNitidaAdaptativa`); si sale borrosa NO se acepta y se pide repetir ("Foto borrosa. Repítela sin mover el celular.").
+- **Mínimo de fotos**: se recomiendan **4** y se exige al menos **3 buenas** para poder guardar (`FOTOS_MINIMAS`).
+- **Eliminación de outliers**: al guardar se descartan las huellas que se alejan mucho del promedio (similitud coseno < 0.6) y se promedian las que quedan; así una mala foto no contamina la huella final.
+
+**Punto 3 — Filtros de calidad en el escaneo** (`AsistenciaFragment.kt`):
+- **Nitidez adaptativa a la luz**: el escaneo ahora usa `esNitidaAdaptativa` (el umbral del Laplaciano escala con el brillo), aceptando tomas oscuras pero nítidas y siguiendo rechazando el desenfoque real.
+
+**Nota:** las demás mejoras del punto 1 (cambiar el modelo a AdaFace/ArcFace) y del punto 3 (detección de oclusión con Face Mesh, norma del embedding como calidad) quedan **pendientes** por requerir re-generar los embeddings o agregar otro modelo de MediaPipe.
 
 ---
 
@@ -151,7 +163,9 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 
 ## 6. Pendientes / notas
 
-- [ ] **Re-probar la sincronización** en 2 celulares con el APK nuevo y leer el resultado por dispositivo en pantalla (y `diag.txt` si falla).
+- [ ] **Re-probar la sincronización** en 2 celulares con el APK nuevo y leer el mensaje final por dispositivo (y `diag.txt` si falla).
 - [ ] Confirmar que la corrección de MediaPipe (0.10.9) resolvió el cierre en el teléfono de la compañera.
+- [ ] (Precisión, opcional) Punto 1: cambiar a un modelo mejor (AdaFace/ArcFace) re-generando los embeddings en el PC.
+- [ ] (Precisión, opcional) Punto 3 avanzado: detección de oclusión con Face Mesh y norma del embedding como calidad.
 - [ ] Decidir si se mantiene la galería precargada del PC o si en el futuro todo se registra desde el celular (aún se conserva).
 - Ideas futuras (no implementadas): selector de fecha en Historial, contador "X de Y registrados", foto por registro, autenticación en la sincronización.
