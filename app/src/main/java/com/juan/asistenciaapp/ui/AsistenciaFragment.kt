@@ -1,12 +1,19 @@
 package com.juan.asistenciaapp.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.PointF
 import android.graphics.RectF
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.util.Log
 import android.util.Size
 import android.view.LayoutInflater
@@ -249,6 +256,45 @@ class AsistenciaFragment : Fragment() {
     }
 
     private fun fechaHoy(): String = LocalDate.now().toString()
+
+    /**
+     * Feedback físico al confirmar una asistencia (para cuando no se puede
+     * mirar la pantalla): vibra y suena un pitido corto. "yaRegistrado" usa
+     * una vibración/sonido más suaves para distinguirlo del registro nuevo.
+     */
+    private fun feedbackConfirmacion(yaRegistrado: Boolean) {
+        val duracion = if (yaRegistrado) 120L else 220L
+        // Vibración (VibratorManager en API 31+, Vibrator antes)
+        try {
+            val vibrador: Vibrator = if (Build.VERSION.SDK_INT >= 31) {
+                val vm = requireContext()
+                    .getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vm.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                requireContext().getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+            vibrador.vibrate(
+                VibrationEffect.createOneShot(duracion, VibrationEffect.DEFAULT_AMPLITUDE)
+            )
+        } catch (_: Exception) {
+        }
+        // Sonido corto (no requiere archivo de audio en el APK)
+        try {
+            val tono = ToneGenerator(
+                AudioManager.STREAM_NOTIFICATION,
+                if (yaRegistrado) 70 else 95
+            )
+            tono.startTone(ToneGenerator.TONE_PROP_BEEP2, duracion.toInt() + 100)
+            view?.postDelayed({
+                try {
+                    tono.release()
+                } catch (_: Exception) {
+                }
+            }, duracion + 350)
+        } catch (_: Exception) {
+        }
+    }
 
     /** Galería fresca: lista del PC + trabajadores de la app, sin eliminados,
      *  con renombres y con las huellas SOBRESCRITAS de los trabajadores del PC
@@ -720,6 +766,7 @@ class AsistenciaFragment : Fragment() {
                 confirmaciones.remove(nombre)
                 if (!hacePoco) {
                     publicarEstado(nombre, sim, ESTADO_YA_REGISTRADO, rect, ancho, alto)
+                    view?.post { feedbackConfirmacion(yaRegistrado = true) }
                 }
             } else {
                 confirmaciones[nombre] = (confirmaciones[nombre] ?: 0) + 1
@@ -727,6 +774,7 @@ class AsistenciaFragment : Fragment() {
                     confirmaciones.remove(nombre)
                     if (!hacePoco) {
                         publicarEstado(nombre, sim, ESTADO_YA_REGISTRADO, rect, ancho, alto)
+                        view?.post { feedbackConfirmacion(yaRegistrado = true) }
                     }
                 } else {
                     publicarEstado(nombre, sim, ESTADO_VERIFICANDO, rect, ancho, alto)
@@ -745,7 +793,10 @@ class AsistenciaFragment : Fragment() {
                 registradosHoy = registradosHoy + nombre
                 contadorHoy++
                 ultimoRegistroMsg[nombre] = System.currentTimeMillis()
-                view?.post { actualizarContador() }
+                view?.post {
+                    actualizarContador()
+                    feedbackConfirmacion(yaRegistrado = false)
+                }
                 publicarEstado(nombre, sim, ESTADO_REGISTRADO, rect, ancho, alto)
             } else {
                 publicarEstado(nombre, sim, ESTADO_YA_REGISTRADO, rect, ancho, alto)
