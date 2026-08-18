@@ -21,7 +21,9 @@ import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.HttpURLConnection
+import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.URL
 import java.net.URLEncoder
 import java.nio.ByteBuffer
@@ -104,52 +106,81 @@ object SyncEngine {
     /** Encuentra a los demás dispositivos: broadcast UDP + vinculados por QR. */
     fun descubrir(context: Context): Set<Dispositivo> {
         val encontrados = mutableSetOf<Dispositivo>()
+        val propias = SyncServidor.ipsLocales()
 
-        // Broadcast UDP de descubrimiento (los demás responden con su nombre)
+        // Broadcast UDP de descubrimiento (los demás responden con su nombre).
+        // El socket se ENLAZA a la IP del WiFi (no a 0.0.0.0): si hay datos
+        // móviles activos, sin esto la ruta saliente puede usar la IP pública y
+        // las respuestas (PONG) jamás regresan -> "sin dispositivos".
         try {
-            val socket = DatagramSocket()
+            val wifiIp = SyncServidor.ipLocal()
+            val socket = if (wifiIp != null) {
+                DatagramSocket(null).apply {
+                    reuseAddress = true
+                    bind(InetSocketAddress(wifiIp, 0))
+                }
+            } else {
+                DatagramSocket()
+            }
             socket.broadcast = true
             val msg = SyncServidor.PING.toByteArray(Charsets.UTF_8)
-            socket.send(
-                DatagramPacket(
-                    msg, msg.size,
-                    InetAddress.getByName("255.255.255.255"),
-                    SyncServidor.PUERTO_UDP
-                )
-            )
+
+            // Se manda a 255.255.255.255 (broadcast limitado) y al broadcast de
+            // la subred (p. ej. 192.168.0.255): algunos routers solo aceptan uno.
+            val destinos = mutableListOf(InetAddress.getByName("255.255.255.255"))
+            wifiIp?.let {
+                val parteRed = it.substringBeforeLast('.')
+                if (parteRed.isNotEmpty()) {
+                    try {
+                        destinos += InetAddress.getByName("$parteRed.255")
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+            for (dest in destinos) {
+                socket.send(DatagramPacket(msg, msg.size, dest, SyncServidor.PUERTO_UDP))
+            }
+
             socket.soTimeout = 1500
             val buf = ByteArray(512)
             while (true) {
                 val p = DatagramPacket(buf, buf.size)
                 socket.receive(p)
+                // Solo IPv4: una dirección IPv6 no es válida en "http://ip:puerto"
+                if (p.address !is Inet4Address) continue
+                val ip = p.address.hostAddress ?: continue
+                if (ip in propias) continue // respuesta de uno mismo al broadcast
                 val txt = String(p.data, 0, p.length, Charsets.UTF_8)
                 if (txt.startsWith(SyncServidor.PONG)) {
                     val nombre = txt.removePrefix(SyncServidor.PONG).trim()
                         .ifEmpty { "Dispositivo" }
-                    val peer = "${p.address.hostAddress}:${SyncServidor.PUERTO_HTTP}"
-                    encontrados += Dispositivo(peer, nombre)
+                    encontrados += Dispositivo("$ip:${SyncServidor.PUERTO_HTTP}", nombre)
                 }
             }
+            socket.close()
         } catch (_: Exception) {
             // timeout normal al terminar de escuchar
         }
 
-        // Vinculados por QR (guardados como "nombre|ip:puerto")
+        // Vinculados por QR (guardados como "nombre|ip:puerto"). Solo se usan
+        // si su IP está en la MISMA red actual: un QR escaneado en otra red
+        // apunta a una IP vieja que ya no existe, y ese "peer fantasma" hacía
+        // que la app reportara "1 de 2 dispositivo(s)" sin razón.
+        val redActual = SyncServidor.ipLocal()?.substringBeforeLast('.')
         for (entrada in SyncServidor.peersConocidos(context)) {
             val i = entrada.indexOf('|')
-            if (i > 0) {
-                encontrados += Dispositivo(entrada.substring(i + 1), entrada.substring(0, i))
-            } else {
-                encontrados += Dispositivo(entrada, "Dispositivo")
-            }
+            val peer = if (i > 0) entrada.substring(i + 1) else entrada
+            val nombre = if (i > 0) entrada.substring(0, i) else "Dispositivo"
+            val ipPeer = peer.substringBefore(':')
+            // Nunca sincronizar consigo mismo (aunque la IP del QR haya caducado
+            // y hoy coincida con una IP propia)
+            if (ipPeer in propias) continue
+            // Red distinta -> IP caducada, se ignora
+            if (redActual != null && ipPeer.substringBeforeLast('.') != redActual) continue
+            encontrados += Dispositivo(peer, nombre)
         }
 
-        // Nunca sincronizar consigo mismo
-        SyncServidor.ipLocal()?.let { propio ->
-            encontrados.removeAll {
-                it.peer == "$propio:${SyncServidor.PUERTO_HTTP}"
-            }
-        }
+        Diag.marcar("sync: ipLocales=${propias} peers=${encontrados.map { it.peer }}")
         return encontrados
     }
 
@@ -166,6 +197,18 @@ object SyncEngine {
      */
     fun sincronizarTodo(context: Context, actualizar: (String) -> Unit): String {
         Diag.iniciar(context.applicationContext)
+        // Forzar que todo el tráfico TCP/HTTP vaya por el WiFi aunque haya
+        // datos móviles activos (síntoma típico de Xiaomi: encuentra
+        // dispositivos por UDP pero no conecta por TCP).
+        SyncServidor.enlazarProcesoAWifi(context)
+        return try {
+            sincronizarTodoInterno(context, actualizar)
+        } finally {
+            SyncServidor.desenlazarProcesoDeRed(context)
+        }
+    }
+
+    private fun sincronizarTodoInterno(context: Context, actualizar: (String) -> Unit): String {
         val peers = descubrir(context)
         if (peers.isEmpty()) {
             Diag.marcar("sync: sin dispositivos")
@@ -191,12 +234,15 @@ object SyncEngine {
                 continue
             }
             if (json.trimStart().startsWith("{\"ok\":false")) {
+                // El dispositivo SÍ respondió (HTTP 200), pero falló al generar
+                // sus datos: no es un problema de conexión.
                 val err = try {
                     JSONObject(json).optString("error", "desconocido")
                 } catch (_: Exception) {
                     "respuesta no válida"
                 }
                 Diag.marcar("sync: error de ${d.peer}: $err")
+                respondieron++
                 continue
             }
             val c = SyncMerge.aplicarJson(context, db, json)
@@ -205,7 +251,12 @@ object SyncEngine {
             respondieron++
         }
 
-        // 2) Que todos bajen de este dispositivo (ya con todo fusionado)
+        // 2) Enviar a cada dispositivo NUESTRO dataset ya fusionado (PUSH por
+        // POST). Antes se pedía a cada uno que lo descargara de nosotros
+        // (GET /sync/orden?url=...): eso requería una conexión INVERSA
+        // (peer -> nosotros) que en algunas redes con datos móviles activos
+        // falla. Con el push solo hace falta la conexión en el sentido que ya
+        // funciona (nosotros -> peer).
         val ip = SyncServidor.ipLocal()
         if (ip == null) {
             Diag.marcar("sync: sin IP local")
@@ -213,16 +264,24 @@ object SyncEngine {
             actualizar(msg)
             return msg
         }
+        val miDataset = SyncEngine.datasetJson(context)
         val miUrl = "http://$ip:${SyncServidor.PUERTO_HTTP}/sync/datos"
         for (d in peers) {
             actualizar(context.getString(R.string.sync_actualizando_dispositivo, d.nombre))
-            val url = "http://${d.peer}/sync/orden?url=${URLEncoder.encode(miUrl, "UTF-8")}"
-            val r = httpGet(url)
+            // 1) PUSH directo por POST (método nuevo, sin conexión inversa)
+            var r = httpPost("http://${d.peer}/sync/datos", miDataset)
+            // 2) Si el otro dispositivo es una versión ANTERIOR que no acepta
+            //    el POST, se prueba el método viejo: que él descargue de nosotros.
+            if (r == null) {
+                Diag.marcar("sync: push POST no aceptado, probando método anterior con ${d.peer}")
+                val url = "http://${d.peer}/sync/orden?url=${URLEncoder.encode(miUrl, "UTF-8")}"
+                r = httpGet(url)
+            }
             if (r != null) {
                 enviado += SyncMerge.decodificarResumen(r)
                 actualizados++
             }
-            Diag.marcar("sync: actualizar ${d.peer} ${if (r != null) "ok" else "falló"}")
+            Diag.marcar("sync: push ${d.peer} ${if (r != null) "ok" else "falló"}")
         }
 
         val msg = construirResumen(context, peers.size, respondieron, actualizados, recibido, enviado)
@@ -283,20 +342,49 @@ object SyncEngine {
         return lineas.joinToString("\n")
     }
 
-    /** GET HTTP simple (con timeout). */
+    /** GET HTTP simple (con timeout). Registra el motivo del fallo en diag.txt. */
     private fun httpGet(url: String): String? {
         return try {
             val conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 8000
             conn.readTimeout = 30000
             conn.requestMethod = "GET"
-            if (conn.responseCode == HttpURLConnection.HTTP_OK) {
+            val code = conn.responseCode
+            if (code == HttpURLConnection.HTTP_OK) {
                 conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
             } else {
+                Diag.marcar("sync: http $code para $url")
                 null
             }
         } catch (e: Exception) {
+            Diag.marcar("sync: fallo http $url -> ${e.javaClass.simpleName}: ${e.message}")
             Log.e(TAG, "httpGet falló: $url (${e.message})")
+            null
+        }
+    }
+
+    /** POST HTTP con cuerpo JSON (PUSH de la sincronización). */
+    private fun httpPost(url: String, cuerpo: String): String? {
+        return try {
+            val bytes = cuerpo.toByteArray(Charsets.UTF_8)
+            val conn = URL(url).openConnection() as HttpURLConnection
+            conn.connectTimeout = 8000
+            conn.readTimeout = 30000
+            conn.requestMethod = "POST"
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            conn.setRequestProperty("Content-Length", bytes.size.toString())
+            conn.outputStream.use { it.write(bytes) }
+            val code = conn.responseCode
+            if (code == HttpURLConnection.HTTP_OK) {
+                conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            } else {
+                Diag.marcar("sync: push http $code para $url")
+                null
+            }
+        } catch (e: Exception) {
+            Diag.marcar("sync: fallo push $url -> ${e.javaClass.simpleName}: ${e.message}")
+            Log.e(TAG, "httpPost falló: $url (${e.message})")
             null
         }
     }

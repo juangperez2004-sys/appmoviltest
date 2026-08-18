@@ -274,19 +274,20 @@ class TrabajadoresFragment : Fragment() {
     /**
      * Borra en lote: todos se eliminan definitivamente (+ historial). Los de
      * la app se borran de la BD; los del PC se excluyen para siempre.
+     * Si un nombre existe en AMBAS (registrado en la app y en la galería del
+     * PC), se cubren las dos: se quita de la BD y se oculta de la galería,
+     * para que no reaparezca al recargar.
      */
     private fun eliminarSeleccionados() {
         val db = AttendanceDb(requireContext())
-        val deApp = todos.associate { it.nombre to it.esNuevo }
+        val enApp = db.trabajadores().map { it.nombre }.toSet()
+        val nombresPc = Gallery(requireContext(), renombres = db.renombres()).nombres.toSet()
         val paraEliminar = mutableListOf<String>()
         val paraPc = mutableListOf<String>()
         for (nombre in seleccionados) {
-            if (deApp[nombre] == true) {
-                paraEliminar += nombre
-            } else {
-                paraPc += nombre
-            }
             Fotos.eliminar(requireContext(), nombre)
+            if (nombre in nombresPc) paraPc += nombre
+            if (nombre in enApp) paraEliminar += nombre
         }
         db.eliminarTrabajadoresConHistorial(paraEliminar)
         db.eliminarPcConHistorial(paraPc)
@@ -379,11 +380,17 @@ class TrabajadoresFragment : Fragment() {
                     binding.imgFoto.visibility = View.GONE
                 }
 
-                // Casilla y resaltado según el modo de selección
+                // Casilla y resaltado según el modo de selección.
+                // La casilla NO es clickeable por sí sola: su estado lo maneja
+                // la selección. Si el toque se lo comiera el checkbox, el item
+                // se marcaría visualmente pero no entraría en la selección y no
+                // se borraría al eliminar en lote.
                 val marcado = item.nombre in seleccionados
                 binding.chkSeleccion.visibility =
                     if (modoSeleccion) View.VISIBLE else View.GONE
                 binding.chkSeleccion.isChecked = marcado
+                binding.chkSeleccion.isClickable = false
+                binding.chkSeleccion.isFocusable = false
                 binding.root.setBackgroundResource(
                     if (modoSeleccion && marcado) {
                         R.drawable.item_seleccionado_fondo

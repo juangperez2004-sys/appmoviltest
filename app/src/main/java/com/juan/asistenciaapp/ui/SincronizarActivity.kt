@@ -68,6 +68,11 @@ class SincronizarActivity : AppCompatActivity() {
             EscanearQRActivity.abrir(this, escanearQr)
         }
         binding.btnSincronizar.setOnClickListener { sincronizarAhora() }
+        binding.btnQuitarVinculados.setOnClickListener {
+            SyncServidor.limpiarPeers(this)
+            binding.tvEstado.text = getString(R.string.quitar_vinculados_ok)
+            mostrarDispositivos()
+        }
 
         mostrarDispositivos()
     }

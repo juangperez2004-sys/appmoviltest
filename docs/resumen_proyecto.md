@@ -98,7 +98,12 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 
 **Modificados:** `AndroidManifest.xml` (permisos INTERNET/WiFi, `usesCleartextTraffic`, actividades), `AttendanceDb.kt` (v6), `menu_trabajadores.xml` + `TrabajadoresFragment.kt` (botón), `MainActivity.kt` (arranca/detiene el servidor), `build.gradle.kts` (NanoHTTPD + ZXing).
 
-**Estado:** implementado; en la primera prueba reportó "Listo pero sin cambios". Se agregó **diagnóstico por dispositivo** en la pantalla (conexión/error/resumen por IP) y mejora en la detección de IP WiFi. **Requiere re-prueba en 2 celulares** (mismo WiFi, app abierta en ambos).
+**Estado:** implementado. **UX de la sincronización** (mejoras posteriores):
+- **Mensajes amigables** en lugar de texto técnico con "0": "Sincronización correcta.", "Listo. Sincronización completada con N dispositivo(s).", "Recibido: 3 trabajadores · 5 asistencias", "Se sincronizó con 1 de 2 dispositivo(s). El resto no respondió (¿app abierta? ¿mismo WiFi?).", "No se pudo confirmar el envío a todos los dispositivos."
+- **Nombre del dispositivo** en vez de IP: cada celular se anuncia con su modelo (o un nombre personalizado configurable en la pantalla de sincronización, p. ej. "Celular 1"), visible en el progreso, al escanear el QR y en "Dispositivos vinculados".
+- El resumen cuenta **lo recibido y lo enviado** (cada dispositivo reporta cuántos cambios aplicó), y "Sincronización correcta." solo aparece si el envío a todos quedó confirmado.
+
+**Requiere re-prueba en 2 celulares** (mismo WiFi, app abierta en ambos).
 
 ### 3.3 Optimización de la app
 
@@ -123,7 +128,7 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 
 - Proyecto subido a **https://github.com/juangperez2004-sys/appmoviltest** (rama `master`).
 - Se creó `.gitignore` (excluye `build/`, `.gradle/`, `.idea/`, `local.properties`, `.freebuff/`, APKs).
-- Commit inicial: `fbe078d` · Commit de mejoras de UX en sincronización: `e16418e`.
+- Commit inicial: `fbe078d` · Mejoras de UX en sincronización: `e16418e` · Mejoras de precisión del reconocimiento: `f7c31c8`.
 
 ### 3.7 Mejoras de precisión del reconocimiento (puntos 2 y 3)
 
@@ -136,6 +141,25 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 - **Nitidez adaptativa a la luz**: el escaneo ahora usa `esNitidaAdaptativa` (el umbral del Laplaciano escala con el brillo), aceptando tomas oscuras pero nítidas y siguiendo rechazando el desenfoque real.
 
 **Nota:** las demás mejoras del punto 1 (cambiar el modelo a AdaFace/ArcFace) y del punto 3 (detección de oclusión con Face Mesh, norma del embedding como calidad) quedan **pendientes** por requerir re-generar los embeddings o agregar otro modelo de MediaPipe.
+
+### 3.8 Correcciones de la sincronización WiFi (pruebas en 2 celulares)
+
+Problema reportado: la app "encontraba" los dispositivos (UDP) pero fallaba el HTTP entre ellos, o decía "No se pudo conectar"/"1 de 2". Causas encontradas y correcciones:
+
+- **IP local no detectada en Xiaomi** (`ip=null`): el filtro por nombre de interfaz no servía; `ipLocal()` ahora se deriva de `ipsLocales()` (todas las IPv4 privadas).
+- **TCP salía por datos móviles** (Xiaomi con IP pública activa): el descubrimiento enlaza su socket a la IP WiFi, y toda la sincronización se enlaza a la red WiFi (`bindProcessToNetwork`, permiso `CHANGE_NETWORK_STATE`). El broadcast se manda a `255.255.255.255` y al de la subred.
+- **Peers "fantasma" del QR**: las IPs guardadas por QR caducan al cambiar de red; ahora se ignoran los QR de otra subred y hay botón "Quitar dispositivos vinculados".
+- **Envío con conexión inversa frágil**: el envío ahora es **PUSH por POST** directo al otro dispositivo (nada de que el otro "baje de nosotros"), con respaldo al método anterior si el otro tiene versión vieja.
+- **Mensajes claros**: cuando el WiFi aísla clientes, el mensaje sugiere usar el **hotspot** de un celular.
+- **Diagnóstico**: `diag.txt` registra IPs, peers, código HTTP y excepción exacta de cada paso.
+
+**Resultado:** el WiFi del plantel **aísla clientes** (no permite TCP entre celulares). La sincronización se completa usando el **hotspot** de un celular. Pendiente confirmar la ronda completa en los 2 celulares con el APK final.
+
+### 3.9 Eliminado múltiple corregido
+
+- La casilla consumía los toques: los trabajadores se veían marcados pero **no entraban en la selección**, así que solo se borraba el primero. La casilla ahora es solo visual y el toque siempre selecciona.
+- Un nombre que existía en la app **y** en la galería del PC se borraba solo de una fuente y reaparecía; ahora se cubren ambas (BD + oculto de la galería).
+- Se corrigió también un error de lint (`WrongConstant`) en `RegistrarTrabajadorActivity`.
 
 ---
 
@@ -163,7 +187,7 @@ Aplicación **Android** en **Kotlin** para el pase de lista por **reconocimiento
 
 ## 6. Pendientes / notas
 
-- [ ] **Re-probar la sincronización** en 2 celulares con el APK nuevo y leer el mensaje final por dispositivo (y `diag.txt` si falla).
+- [ ] **Confirmar la sincronización completa en 2 celulares usando el hotspot** (el WiFi del plantel aísla clientes y bloquea el TCP entre celulares).
 - [ ] Confirmar que la corrección de MediaPipe (0.10.9) resolvió el cierre en el teléfono de la compañera.
 - [ ] (Precisión, opcional) Punto 1: cambiar a un modelo mejor (AdaFace/ArcFace) re-generando los embeddings en el PC.
 - [ ] (Precisión, opcional) Punto 3 avanzado: detección de oclusión con Face Mesh y norma del embedding como calidad.

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.Surface
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -173,8 +174,14 @@ class RegistrarTrabajadorActivity : AppCompatActivity() {
                 val preview = Preview.Builder().build().also {
                     it.setSurfaceProvider(binding.previewView.surfaceProvider)
                 }
+                val rot = when (binding.root.display?.rotation) {
+                    Surface.ROTATION_90 -> Surface.ROTATION_90
+                    Surface.ROTATION_180 -> Surface.ROTATION_180
+                    Surface.ROTATION_270 -> Surface.ROTATION_270
+                    else -> Surface.ROTATION_0
+                }
                 imageCapture = ImageCapture.Builder()
-                    .setTargetRotation(binding.root.display?.rotation ?: 0)
+                    .setTargetRotation(rot)
                     .build()
                 val selector = if (camaraFrontal) {
                     CameraSelector.DEFAULT_FRONT_CAMERA
