@@ -1,6 +1,7 @@
 package com.juan.asistenciaapp.sync
 
 import android.content.Context
+import android.os.Build
 import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import java.net.DatagramPacket
@@ -27,6 +28,7 @@ object SyncServidor {
 
     private const val PREFS = "sync"
     private const val CLAVE_PEERS = "peers"
+    private const val CLAVE_NOMBRE = "nombre_dispositivo"
 
     @Volatile
     private var http: NanoHTTPD? = null
@@ -37,11 +39,30 @@ object SyncServidor {
     @Volatile
     private var socketUdp: DatagramSocket? = null
 
+    @Volatile
+    private var appContext: Context? = null
+
+    /** Nombre con el que este dispositivo se muestra a los demás (configurable). */
+    fun nombreDispositivo(context: Context): String {
+        val guardado = context.getSharedPreferences(PREFS, 0)
+            .getString(CLAVE_NOMBRE, null)
+        if (!guardado.isNullOrBlank()) return guardado
+        return Build.MODEL.ifBlank { "Celular" }
+    }
+
+    /** Guarda el nombre personalizado de este dispositivo. */
+    fun guardarNombreDispositivo(context: Context, nombre: String) {
+        context.getSharedPreferences(PREFS, 0).edit()
+            .putString(CLAVE_NOMBRE, nombre.trim().ifEmpty { null })
+            .apply()
+    }
+
     /** Inicia el servidor HTTP y la respuesta UDP (idempotente). */
     @Synchronized
     fun iniciar(context: Context) {
         if (http != null) return
         val app = context.applicationContext
+        appContext = app
 
         val s = object : NanoHTTPD(PUERTO_HTTP) {
             override fun serve(session: NanoHTTPD.IHTTPSession): NanoHTTPD.Response {
@@ -75,11 +96,11 @@ object SyncServidor {
                             )
                         } else {
                             try {
-                                SyncEngine.aplicarDesdeUrl(app, url)
+                                val conteo = SyncEngine.aplicarDesdeUrl(app, url)
                                 newFixedLengthResponse(
                                     NanoHTTPD.Response.Status.OK,
                                     "application/json; charset=utf-8",
-                                    "{\"ok\":true}"
+                                    "{\"ok\":true,\"resumen\":\"${SyncMerge.codificarResumen(conteo)}\"}"
                                 )
                             } catch (e: Exception) {
                                 Log.e(TAG, "orden falló", e)
@@ -142,7 +163,8 @@ object SyncServidor {
                     socket.receive(paquete)
                     val msg = String(paquete.data, 0, paquete.length, Charsets.UTF_8)
                     if (msg == PING) {
-                        val respuesta = "$PONG $PUERTO_HTTP".toByteArray(Charsets.UTF_8)
+                        val nombre = appContext?.let { nombreDispositivo(it) } ?: Build.MODEL
+                        val respuesta = "$PONG $nombre".toByteArray(Charsets.UTF_8)
                         socket.send(
                             DatagramPacket(
                                 respuesta, respuesta.size,
@@ -194,17 +216,17 @@ object SyncServidor {
         return respaldo
     }
 
-    /** Dispositivos vinculados por QR (en formato "ip:puerto"). */
+    /** Dispositivos vinculados por QR, guardados como "nombre|ip:puerto". */
     fun peersConocidos(context: Context): Set<String> =
         context.getSharedPreferences(PREFS, 0)
             .getStringSet(CLAVE_PEERS, emptySet())
             ?.toSet() ?: emptySet()
 
-    /** Vincula un dispositivo escaneado por QR. */
-    fun agregarPeer(context: Context, peer: String) {
+    /** Vincula un dispositivo escaneado por QR (guarda su nombre y dirección). */
+    fun agregarPeer(context: Context, d: Dispositivo) {
         val prefs = context.getSharedPreferences(PREFS, 0)
         val set = (prefs.getStringSet(CLAVE_PEERS, emptySet()) ?: emptySet()).toMutableSet()
-        set += peer
+        set += "${d.nombre}|${d.peer}"
         prefs.edit().putStringSet(CLAVE_PEERS, set).apply()
     }
 }

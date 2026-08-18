@@ -33,6 +33,25 @@
                 android:textColor="@color/gris_texto"
                 android:textSize="14sp" />
 
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:hint="@string/nombre_este_dispositivo"
+                app:boxStrokeColor="@color/azul"
+                app:boxStrokeWidth="1dp"
+                app:hintTextColor="@color/gris_texto">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etNombreDispositivo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="textCapWords"
+                    android:maxLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

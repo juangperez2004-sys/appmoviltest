@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.doAfterTextChanged
 import com.juan.asistenciaapp.R
 import com.juan.asistenciaapp.databinding.ActivitySincronizarBinding
 import com.juan.asistenciaapp.sync.SyncEngine
@@ -26,10 +27,10 @@ class SincronizarActivity : AppCompatActivity() {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             val uri = result.data?.getStringExtra("qr")
-            val peer = uri?.let { SyncEngine.peerDeQr(it) }
-            if (peer != null) {
-                SyncServidor.agregarPeer(this, peer)
-                binding.tvEstado.text = getString(R.string.dispositivo_agregado, peer)
+            val d = uri?.let { SyncEngine.peerDeQr(it) }
+            if (d != null) {
+                SyncServidor.agregarPeer(this, d)
+                binding.tvEstado.text = getString(R.string.dispositivo_agregado, d.nombre)
                 mostrarDispositivos()
             } else {
                 binding.tvEstado.text = getString(R.string.qr_no_valido)
@@ -55,7 +56,13 @@ class SincronizarActivity : AppCompatActivity() {
             getString(R.string.sin_red)
         }
 
-        binding.imgQr.setImageBitmap(SyncEngine.generarQr(SyncEngine.miUri(this), 512))
+        // Nombre de este dispositivo: se muestra a los demás y se usa en el QR
+        binding.etNombreDispositivo.setText(SyncServidor.nombreDispositivo(this))
+        binding.etNombreDispositivo.doAfterTextChanged {
+            SyncServidor.guardarNombreDispositivo(this, it?.toString().orEmpty())
+            actualizarQr()
+        }
+        actualizarQr()
 
         binding.btnEscanear.setOnClickListener {
             EscanearQRActivity.abrir(this, escanearQr)
@@ -98,11 +105,19 @@ class SincronizarActivity : AppCompatActivity() {
 
     private fun mostrarDispositivos() {
         val peers = SyncServidor.peersConocidos(this)
-        binding.tvDispositivos.text = if (peers.isEmpty()) {
+        val nombres = peers.map { entrada ->
+            val i = entrada.indexOf('|')
+            if (i > 0) entrada.substring(0, i) else entrada
+        }
+        binding.tvDispositivos.text = if (nombres.isEmpty()) {
             getString(R.string.sin_dispositivos)
         } else {
-            getString(R.string.dispositivos_conocidos) + "\n" + peers.joinToString("\n")
+            getString(R.string.dispositivos_conocidos) + "\n" + nombres.joinToString("\n")
         }
+    }
+
+    private fun actualizarQr() {
+        binding.imgQr.setImageBitmap(SyncEngine.generarQr(SyncEngine.miUri(this), 512))
     }
 
     companion object {

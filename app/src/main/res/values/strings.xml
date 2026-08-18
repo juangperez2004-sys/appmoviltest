@@ -86,6 +86,7 @@
     <string name="sincronizar_titulo">Sincronización</string>
     <string name="ayuda_sincronizar">Conecta este celular al mismo WiFi que los demás y presiona "Sincronizar ahora" para poner al día todos los dispositivos a la vez (sin internet).</string>
     <string name="mi_direccion">Dirección: %1$s</string>
+    <string name="nombre_este_dispositivo">Nombre de este dispositivo</string>
     <string name="mi_qr">Código QR de este dispositivo</string>
     <string name="sin_red">Sin conexión WiFi</string>
     <string name="sincronizar_ahora">Sincronizar ahora</string>
@@ -96,4 +97,19 @@
     <string name="qr_no_valido">El código QR no es válido</string>
     <string name="dispositivos_conocidos">Dispositivos vinculados:</string>
     <string name="sin_dispositivos">Sin dispositivos vinculados. Escanea el QR del otro dispositivo (también se encuentran solos si están en el mismo WiFi).</string>
+
+    <!-- Mensajes de estado de la sincronización -->
+    <string name="sync_encontrados">Se encontraron %1$d dispositivo(s) en la red.</string>
+    <string name="sync_sin_dispositivos">No se encontraron dispositivos. Verifica que todos estén conectados al mismo WiFi y con la app abierta. Si el router lo bloquea, escanea el código QR.</string>
+    <string name="sync_sin_conexion">No se pudo conectar con los demás dispositivos. Verifica que estén en el mismo WiFi y con la app abierta.</string>
+    <string name="sync_leyendo">Leyendo datos de los otros dispositivos…</string>
+    <string name="sync_actualizando">Enviando tus datos a los otros dispositivos…</string>
+    <string name="sync_leyendo_dispositivo">Leyendo datos del dispositivo %1$s…</string>
+    <string name="sync_actualizando_dispositivo">Enviando tus datos a %1$s…</string>
+    <string name="sync_listo">Listo. Sincronización completada con %1$d dispositivo(s).</string>
+    <string name="sync_parcial">Se sincronizó con %1$d de %2$d dispositivo(s). El resto no respondió (¿app abierta? ¿mismo WiFi?).</string>
+    <string name="sync_recibido">Recibido: %1$s</string>
+    <string name="sync_enviado">Enviado: %1$s</string>
+    <string name="sync_correcta">Sincronización correcta.</string>
+    <string name="sync_envio_no_confirmado">No se pudo confirmar el envío a todos los dispositivos. Vuelve a intentarlo.</string>
 </resources>

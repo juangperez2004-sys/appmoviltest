@@ -13,6 +13,7 @@ import com.google.zxing.RGBLuminanceSource
 import com.google.zxing.common.HybridBinarizer
 import com.google.zxing.qrcode.QRCodeWriter
 import com.juan.asistenciaapp.Diag
+import com.juan.asistenciaapp.R
 import com.juan.asistenciaapp.data.AttendanceDb
 import com.juan.asistenciaapp.face.Fotos
 import org.json.JSONArray
@@ -38,10 +39,11 @@ object SyncEngine {
     //  QR
     // ------------------------------------------------------------------
 
-    /** Dirección de este dispositivo: "asistencia://ip:puerto". */
+    /** Dirección de este dispositivo: "asistencia://ip:puerto?n=nombre". */
     fun miUri(context: Context): String {
         val ip = SyncServidor.ipLocal() ?: "127.0.0.1"
-        return "asistencia://$ip:${SyncServidor.PUERTO_HTTP}"
+        val nombre = URLEncoder.encode(SyncServidor.nombreDispositivo(context), "UTF-8")
+        return "asistencia://$ip:${SyncServidor.PUERTO_HTTP}?n=$nombre"
     }
 
     fun generarQr(texto: String, lado: Int): Bitmap {
@@ -73,15 +75,26 @@ object SyncEngine {
         }
     }
 
-    /** Extrae "ip:puerto" de una URI "asistencia://ip:puerto". */
-    fun peerDeQr(uri: String): String? {
+    /** Extrae ip:puerto y nombre de una URI "asistencia://ip:puerto?n=nombre". */
+    fun peerDeQr(uri: String): Dispositivo? {
         val limpiado = uri.removePrefix("asistencia://")
-        val parte = limpiado.substringBefore("/")
-        val partes = parte.split(":")
-        if (partes.size == 2 && partes[1].isNotEmpty()) {
-            return partes[0] + ":" + SyncServidor.PUERTO_HTTP
+        val host = limpiado.substringBefore("?").substringBefore("/")
+        val partes = host.split(":")
+        if (partes.size != 2 || partes[1].isEmpty()) return null
+
+        var nombre = "Dispositivo"
+        val query = limpiado.substringAfter("?", "")
+        for (par in query.split("&")) {
+            val kv = par.split("=", limit = 2)
+            if (kv.size == 2 && kv[0] == "n") {
+                nombre = try {
+                    java.net.URLDecoder.decode(kv[1], "UTF-8")
+                } catch (_: Exception) {
+                    kv[1]
+                }
+            }
         }
-        return null
+        return Dispositivo(partes[0] + ":" + SyncServidor.PUERTO_HTTP, nombre)
     }
 
     // ------------------------------------------------------------------
@@ -89,10 +102,10 @@ object SyncEngine {
     // ------------------------------------------------------------------
 
     /** Encuentra a los demás dispositivos: broadcast UDP + vinculados por QR. */
-    fun descubrir(context: Context): Set<String> {
-        val encontrados = mutableSetOf<String>()
+    fun descubrir(context: Context): Set<Dispositivo> {
+        val encontrados = mutableSetOf<Dispositivo>()
 
-        // Broadcast UDP de descubrimiento
+        // Broadcast UDP de descubrimiento (los demás responden con su nombre)
         try {
             val socket = DatagramSocket()
             socket.broadcast = true
@@ -111,18 +124,31 @@ object SyncEngine {
                 socket.receive(p)
                 val txt = String(p.data, 0, p.length, Charsets.UTF_8)
                 if (txt.startsWith(SyncServidor.PONG)) {
-                    encontrados += "${p.address.hostAddress}:${SyncServidor.PUERTO_HTTP}"
+                    val nombre = txt.removePrefix(SyncServidor.PONG).trim()
+                        .ifEmpty { "Dispositivo" }
+                    val peer = "${p.address.hostAddress}:${SyncServidor.PUERTO_HTTP}"
+                    encontrados += Dispositivo(peer, nombre)
                 }
             }
         } catch (_: Exception) {
             // timeout normal al terminar de escuchar
         }
 
-        encontrados += SyncServidor.peersConocidos(context)
+        // Vinculados por QR (guardados como "nombre|ip:puerto")
+        for (entrada in SyncServidor.peersConocidos(context)) {
+            val i = entrada.indexOf('|')
+            if (i > 0) {
+                encontrados += Dispositivo(entrada.substring(i + 1), entrada.substring(0, i))
+            } else {
+                encontrados += Dispositivo(entrada, "Dispositivo")
+            }
+        }
 
         // Nunca sincronizar consigo mismo
         SyncServidor.ipLocal()?.let { propio ->
-            encontrados -= "$propio:${SyncServidor.PUERTO_HTTP}"
+            encontrados.removeAll {
+                it.peer == "$propio:${SyncServidor.PUERTO_HTTP}"
+            }
         }
         return encontrados
     }
@@ -136,66 +162,125 @@ object SyncEngine {
      *  1) baja y fusiona de cada uno;
      *  2) pide a cada uno que baje de este (ya fusionado).
      * Así todos convergen a la misma información en una sola ronda.
+     * Devuelve un mensaje amigable para el usuario administrativo.
      */
     fun sincronizarTodo(context: Context, actualizar: (String) -> Unit): String {
         Diag.iniciar(context.applicationContext)
         val peers = descubrir(context)
         if (peers.isEmpty()) {
             Diag.marcar("sync: sin dispositivos")
-            actualizar("Sin dispositivos encontrados en la red WiFi")
-            return "Sin dispositivos encontrados. Verifica que todos estén en el mismo WiFi " +
-                "y con la app abierta. Si el router bloquea el descubrimiento, escanea el QR."
+            val msg = context.getString(R.string.sync_sin_dispositivos)
+            actualizar(msg)
+            return msg
         }
-        actualizar("Dispositivos encontrados: ${peers.size}")
         Diag.marcar("sync: ${peers.size} dispositivo(s): ${peers.joinToString(", ")}")
+        actualizar(context.getString(R.string.sync_encontrados, peers.size))
 
         val db = AttendanceDb(context)
-        val partes = mutableListOf<String>()
+        val recibido = ConteoSync()
+        val enviado = ConteoSync()
+        var respondieron = 0
+        var actualizados = 0
 
         // 1) Bajar de todos y fusionar
-        for (peer in peers) {
-            actualizar("Conectando con $peer…")
-            val json = httpGet("http://$peer/sync/datos")
+        for (d in peers) {
+            actualizar(context.getString(R.string.sync_leyendo_dispositivo, d.nombre))
+            val json = httpGet("http://${d.peer}/sync/datos")
             if (json == null) {
-                Diag.marcar("sync: sin conexión con $peer")
-                partes += "$peer: SIN CONEXIÓN (¿app abierta? ¿mismo WiFi? ¿el router permite que los equipos se hablen?)"
+                Diag.marcar("sync: sin conexión con ${d.peer}")
                 continue
             }
-            // Si el servidor respondió con un error explícito, mostrarlo
             if (json.trimStart().startsWith("{\"ok\":false")) {
                 val err = try {
                     JSONObject(json).optString("error", "desconocido")
                 } catch (_: Exception) {
                     "respuesta no válida"
                 }
-                Diag.marcar("sync: error de $peer: $err")
-                partes += "$peer: error ($err)"
+                Diag.marcar("sync: error de ${d.peer}: $err")
                 continue
             }
-            val resumen = SyncMerge.aplicarJson(context, db, json)
-            Diag.marcar("sync: $peer → $resumen")
-            partes += "$peer: $resumen"
+            val c = SyncMerge.aplicarJson(context, db, json)
+            Diag.marcar("sync: ${d.peer} → ${SyncMerge.codificarResumen(c)}")
+            recibido += c
+            respondieron++
         }
 
         // 2) Que todos bajen de este dispositivo (ya con todo fusionado)
         val ip = SyncServidor.ipLocal()
         if (ip == null) {
             Diag.marcar("sync: sin IP local")
-            actualizar("Sin conexión WiFi para compartir datos")
-            return partes.joinToString("\n") + "\n\nSin conexión WiFi para compartir datos."
+            val msg = context.getString(R.string.sync_sin_conexion)
+            actualizar(msg)
+            return msg
         }
         val miUrl = "http://$ip:${SyncServidor.PUERTO_HTTP}/sync/datos"
-        for (peer in peers) {
-            actualizar("Actualizando $peer…")
-            val url = "http://$peer/sync/orden?url=${URLEncoder.encode(miUrl, "UTF-8")}"
-            val ok = httpGet(url) != null
-            Diag.marcar("sync: actualizar $peer ${if (ok) "ok" else "falló"}")
-            partes += "$peer: ${if (ok) "actualizado" else "no confirmado"}"
+        for (d in peers) {
+            actualizar(context.getString(R.string.sync_actualizando_dispositivo, d.nombre))
+            val url = "http://${d.peer}/sync/orden?url=${URLEncoder.encode(miUrl, "UTF-8")}"
+            val r = httpGet(url)
+            if (r != null) {
+                enviado += SyncMerge.decodificarResumen(r)
+                actualizados++
+            }
+            Diag.marcar("sync: actualizar ${d.peer} ${if (r != null) "ok" else "falló"}")
         }
 
-        val texto = partes.joinToString("\n")
-        actualizar(texto)
-        return texto
+        val msg = construirResumen(context, peers.size, respondieron, actualizados, recibido, enviado)
+        actualizar(msg)
+        return msg
+    }
+
+    /** Arma el mensaje final amigable según lo que pasó en la ronda. */
+    private fun construirResumen(
+        context: Context,
+        total: Int,
+        respondieron: Int,
+        actualizados: Int,
+        recibido: ConteoSync,
+        enviado: ConteoSync
+    ): String {
+        val res = context.resources
+        val recibidoTxt = recibido.resumenFriendly()
+        val enviadoTxt = enviado.resumenFriendly()
+        val hayCambios = recibidoTxt.isNotEmpty() || enviadoTxt.isNotEmpty()
+        val completo = respondieron == total && actualizados == total
+        val lineas = mutableListOf<String>()
+
+        when {
+            respondieron == 0 -> {
+                lineas += res.getString(R.string.sync_sin_conexion)
+            }
+
+            completo && !hayCambios -> {
+                // Sin cambios y envío confirmado: mensaje corto y claro
+                lineas += res.getString(R.string.sync_correcta)
+            }
+
+            completo -> {
+                lineas += res.getString(R.string.sync_listo, total)
+                if (recibidoTxt.isNotEmpty()) {
+                    lineas += res.getString(R.string.sync_recibido, recibidoTxt)
+                }
+                if (enviadoTxt.isNotEmpty()) {
+                    lineas += res.getString(R.string.sync_enviado, enviadoTxt)
+                }
+            }
+
+            else -> {
+                lineas += res.getString(R.string.sync_parcial, respondieron, total)
+                if (recibidoTxt.isNotEmpty()) {
+                    lineas += res.getString(R.string.sync_recibido, recibidoTxt)
+                }
+                if (enviadoTxt.isNotEmpty()) {
+                    lineas += res.getString(R.string.sync_enviado, enviadoTxt)
+                }
+                if (actualizados < respondieron) {
+                    lineas += res.getString(R.string.sync_envio_no_confirmado)
+                }
+            }
+        }
+
+        return lineas.joinToString("\n")
     }
 
     /** GET HTTP simple (con timeout). */
@@ -221,10 +306,62 @@ object SyncEngine {
         SyncMerge.datasetJson(context, AttendanceDb(context))
 
     /** Descarga el JSON de una URL (otro dispositivo) y lo fusiona localmente. */
-    fun aplicarDesdeUrl(context: Context, url: String) {
+    fun aplicarDesdeUrl(context: Context, url: String): ConteoSync =
         SyncMerge.aplicarDesdeUrl(context, url)
+}
+
+/**
+ * Conteo de cambios aplicados en una ronda de sincronización.
+ * Se usa para mostrar mensajes amigables ("3 trabajadores nuevos", etc.).
+ */
+data class ConteoSync(
+    var trabajadores: Int = 0,
+    var asistencias: Int = 0,
+    var renombres: Int = 0,
+    var ocultos: Int = 0,
+    var huellas: Int = 0,
+    var borrados: Int = 0,
+    var fotos: Int = 0
+) {
+    operator fun plus(o: ConteoSync) = ConteoSync(
+        trabajadores + o.trabajadores,
+        asistencias + o.asistencias,
+        renombres + o.renombres,
+        ocultos + o.ocultos,
+        huellas + o.huellas,
+        borrados + o.borrados,
+        fotos + o.fotos
+    )
+
+    operator fun plusAssign(o: ConteoSync) {
+        trabajadores += o.trabajadores
+        asistencias += o.asistencias
+        renombres += o.renombres
+        ocultos += o.ocultos
+        huellas += o.huellas
+        borrados += o.borrados
+        fotos += o.fotos
+    }
+
+    /** Texto breve y amigable con lo que cambió (vacío si no cambió nada). */
+    fun resumenFriendly(): String {
+        val partes = mutableListOf<String>()
+        val eliminados = borrados + ocultos
+        if (trabajadores > 0) partes += "$trabajadores trabajador(es)"
+        if (asistencias > 0) partes += "$asistencias asistencia(s)"
+        if (fotos > 0) partes += "$fotos foto(s)"
+        if (eliminados > 0) partes += "$eliminados elimina(do)(s)"
+        if (renombres > 0) partes += "$renombres renombrado(s)"
+        if (huellas > 0) partes += "$huellas huella(s) actualizada(s)"
+        return partes.joinToString(" · ")
     }
 }
+
+/** Un dispositivo encontrado: dirección "ip:puerto" y su nombre para mostrar. */
+data class Dispositivo(
+    val peer: String,
+    val nombre: String
+)
 
 /**
  * Serialización y fusión del conjunto de datos de la sincronización.
@@ -309,11 +446,11 @@ object SyncMerge {
         return root.toString()
     }
 
-    /** Descarga el JSON de una URL y lo fusiona localmente. */
-    fun aplicarDesdeUrl(context: Context, url: String) {
+    /** Descarga el JSON de una URL y lo fusiona localmente. Devuelve qué cambió. */
+    fun aplicarDesdeUrl(context: Context, url: String): ConteoSync {
         val json = httpGetDe(url)
             ?: throw IllegalStateException("No se pudo descargar los datos del otro dispositivo")
-        aplicarJson(context, AttendanceDb(context), json)
+        return aplicarJson(context, AttendanceDb(context), json)
     }
 
     /**
@@ -321,16 +458,11 @@ object SyncMerge {
      *  - last-write-wins por updated_at en trabajadores, renombres y huellas;
      *  - asistencias y ocultos: solo se agregan (sin duplicados);
      *  - borrados: un tombstone más reciente elimina al trabajador local.
+     * Devuelve el conteo de cambios aplicados.
      */
-    fun aplicarJson(context: Context, db: AttendanceDb, json: String): String {
+    fun aplicarJson(context: Context, db: AttendanceDb, json: String): ConteoSync {
         val root = JSONObject(json)
-        var agregados = 0
-        var registros = 0
-        var renombres = 0
-        var ocultos = 0
-        var huellas = 0
-        var borrados = 0
-        var fotos = 0
+        val conteo = ConteoSync()
 
         // Tombstones primero: un borrado reciente evita reintroducir al trabajador
         val mapaBorrados = HashMap<String, Long>()
@@ -341,7 +473,7 @@ object SyncMerge {
             val ts = o.getLong("ts")
             mapaBorrados[nombre] = ts
             if (db.aplicarBorradoSync(nombre, ts)) {
-                borrados++
+                conteo.borrados++
                 Fotos.eliminar(context, nombre)
             }
         }
@@ -364,7 +496,7 @@ object SyncMerge {
             if (borradoTs != null && borradoTs >= ts) continue
             val emb = if (o.isNull("emb")) null else a64AFlotes(o.getString("emb"))
             if (db.upsertTrabajadorSync(nombre, o.optString("fecha", ""), emb, ts)) {
-                agregados++
+                conteo.trabajadores++
                 val foto = fotosPorNombre[nombre]
                 if (foto != null) {
                     try {
@@ -372,7 +504,7 @@ object SyncMerge {
                         val archivo = Fotos.archivo(context, nombre)
                         archivo.parentFile?.mkdirs()
                         archivo.writeBytes(bytes)
-                        fotos++
+                        conteo.fotos++
                     } catch (_: Exception) {
                     }
                 }
@@ -388,7 +520,7 @@ object SyncMerge {
                     o.getString("nombre"), o.getLong("ts")
                 )
             ) {
-                registros++
+                conteo.asistencias++
             }
         }
 
@@ -397,14 +529,14 @@ object SyncMerge {
         for (i in 0 until arrRenombres.length()) {
             val o = arrRenombres.getJSONObject(i)
             if (db.upsertRenombreSync(o.getString("or"), o.getString("nu"), o.getLong("ts"))) {
-                renombres++
+                conteo.renombres++
             }
         }
 
         // Eliminados del PC (union)
         val arrOcultos = root.optJSONArray("ocultos") ?: JSONArray()
         for (i in 0 until arrOcultos.length()) {
-            if (db.agregarOcultoSync(arrOcultos.getString(i))) ocultos++
+            if (db.agregarOcultoSync(arrOcultos.getString(i))) conteo.ocultos++
         }
 
         // Huellas sobrescritas
@@ -417,12 +549,40 @@ object SyncMerge {
                     o.getLong("ts")
                 )
             ) {
-                huellas++
+                conteo.huellas++
             }
         }
 
-        return "trabajadores +$agregados · asistencias +$registros · renombres $renombres · " +
-            "eliminados $borrados · fotos $fotos · huellas $huellas"
+        return conteo
+    }
+
+    // ------------------------------------------------------------------
+    //  Codificación del resumen (para que el otro dispositivo reporte qué aplicó)
+    // ------------------------------------------------------------------
+
+    /** Codifica el conteo en una cadena corta "t,a,r,o,h,b,f". */
+    fun codificarResumen(c: ConteoSync): String =
+        "${c.trabajadores},${c.asistencias},${c.renombres},${c.ocultos}," +
+            "${c.huellas},${c.borrados},${c.fotos}"
+
+    /** Decodifica el "resumen" de la respuesta JSON de /sync/orden. */
+    fun decodificarResumen(json: String): ConteoSync {
+        val c = ConteoSync()
+        try {
+            val s = JSONObject(json).optString("resumen", "")
+            val p = s.split(",")
+            if (p.size == 7) {
+                c.trabajadores = p[0].toIntOrNull() ?: 0
+                c.asistencias = p[1].toIntOrNull() ?: 0
+                c.renombres = p[2].toIntOrNull() ?: 0
+                c.ocultos = p[3].toIntOrNull() ?: 0
+                c.huellas = p[4].toIntOrNull() ?: 0
+                c.borrados = p[5].toIntOrNull() ?: 0
+                c.fotos = p[6].toIntOrNull() ?: 0
+            }
+        } catch (_: Exception) {
+        }
+        return c
     }
 
     // ------------------------------------------------------------------
